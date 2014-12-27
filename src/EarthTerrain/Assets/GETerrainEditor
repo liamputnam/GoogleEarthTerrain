@@ -1,0 +1,32 @@
+using UnityEngine;
+using UnityEditor;
+using System.Collections;
+
+[CustomEditor(typeof(GETerrain))]
+public class GETerrainEditor : Editor
+{
+    private Vector2 worldPosition;
+    private int radius;
+
+    public override void OnInspectorGUI()
+    {
+        EditorGUILayout.LabelField("Terrain Creator");
+
+        EditorGUILayout.Vector2Field("World Position", worldPosition);
+
+        EditorGUILayout.IntField("Radius", radius);
+
+        if (GUILayout.Button("Create Terrain"))
+        {
+            if (radius == 0)
+            {
+                Debug.LogWarning("Please fill out all the world information!");
+                worldPosition = Vector2.zero;
+                radius = 2;
+            }
+
+            GETerrain geTerrain = new GETerrain(worldPosition, radius);
+            geTerrain.CreateTerrain();
+        }
+    }
+}
