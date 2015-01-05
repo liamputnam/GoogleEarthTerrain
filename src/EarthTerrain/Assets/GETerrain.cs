@@ -4,39 +4,22 @@ using SimpleJSON;
 
 public class GETerrain : MonoBehaviour
 {
-    public Vector2 worldPos;
-    public int radius = 2;
-    [HideInInspector]
-    public bool requestFailed = false;
-
-    private float[,] heights;
-
-    private string urlStem = "https://maps.googleapis.com/maps/api/elevation/json";
-
-    private float km_per_degree_latitude = 111.2f;
+    public Vector2 worldPos = new Vector2(0,0);
+    public int radius = 1;
 	
-    private float[,] vertexGrid;
+
+	public void Start()
+	{
+		CreateTerrain ();
+	}
+
 
     public GETerrain(Vector2 _worldPos, int _radius)
     {
         worldPos = _worldPos;
 		radius = _radius;
     }
-
-    public void ClearVertexGrid()
-    {
-        vertexGrid = new float[2 * radius, 2 * radius];
-        for (int i = 0; i < 2 * radius; i++)
-        {
-            for (int j = 0; j < 2 * radius; j++)
-            {
-                vertexGrid[i, j] = Mathf.Infinity;
-            }
-        }
-        km_per_degree_latitude = 111.2f;
-        urlStem = "https://maps.googleapis.com/maps/api/elevation/json";
-    }
-
+	 
     public void CreateTerrain()
     {
         StartCoroutine(GetHeights(worldPos, radius));
@@ -44,9 +27,16 @@ public class GETerrain : MonoBehaviour
 
     private IEnumerator GetHeights(Vector2 start, int radius)
     {
-        Debug.Log("GetVertexRow");
+
+		Terrain terra = Terrain.activeTerrain;
+		int width = terra.terrainData.heightmapWidth;
+		int length = terra.terrainData.heightmapHeight;
+		float[,] heights = new float[width,length];
+
+		Debug.Log("GetVertexRow");
         Debug.Log("Start: " + start + "| " + "Radius: " + radius);
-        string path = "center=" + start[0] + "," + start[1] + "&radius=" + radius;
+        string path = "center=" + start[0] + "," + start[1] + "&radius=" + 
+				radius + "&width=" + width + "&length=" + length;
         string url = "104.236.5.114:5000/elevation" + "?" + path;
 
         Debug.Log(url);
@@ -62,29 +52,35 @@ public class GETerrain : MonoBehaviour
         else
         {
 			Debug.Log ("WWW Error" + www.error);
-            requestFailed = true;
             yield return null;
         }
 
 		JSONNode elevation_data = SimpleJSON.JSONNode.Parse (www.text);
         Debug.Log("elevation_data " + elevation_data.ToString());
-		// loop over results
-		for (int i = 0; i < elevation_data.Count; i++)
-		{
-            Debug.Log(elevation_data[i]);
-            for (int j = 0; j < elevation_data[i].Count; j++)
-            {
-                Debug.Log("i = " + i);
-                // record the heights
-                vertexGrid[i, j] = elevation_data.AsArray[i].AsArray[j].AsFloat;
-            }
-        }
-        
-        TerrainData terrainData = new TerrainData();
-        terrainData.SetHeights(0, 0, vertexGrid);
-        Terrain.CreateTerrainGameObject(terrainData);
 
-	}
+		if (elevation_data["error"] != null)
+		{
+			Debug.Log ("Error! " + elevation_data["error"]);
+		}
+		else
+		{
+
+
+			// loop over results
+			for (int i = 0; i < elevation_data.Count; i++)
+			{
+				Debug.Log("elevation_data[" + i + "] " + elevation_data[i].AsArray);
+	            for (int j = 0; j < elevation_data[i].Count; j++)
+	            {
+					Debug.Log("elevation_data[" + i + "][" + j + "] " + elevation_data[i][j]);
+					// record the heights
+					heights[i, j] = elevation_data[i][j].AsFloat;
+
+				}
+			}            
+			terra.terrainData.SetHeights(0,0, heights);
+		}
+	} 
 
     public void SetWorldPosition(Vector2 worldPos)
     {
