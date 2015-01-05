@@ -12,7 +12,7 @@ public class GETerrainEditor : Editor
     {
         EditorGUILayout.LabelField("Terrain Creator");
 
-        EditorGUILayout.Vector2Field("World Position", worldPosition);
+        EditorGUILayout.Vector2Field("Latitude and Longitude", worldPosition);
 
         EditorGUILayout.IntField("Radius", radius);
 
@@ -22,11 +22,16 @@ public class GETerrainEditor : Editor
             {
                 Debug.LogWarning("Please fill out all the world information!");
                 worldPosition = Vector2.zero;
-                radius = 2;
+                radius = 1;
             }
 
-            GETerrain geTerrain = new GETerrain(worldPosition, radius);
+            GameObject obj = new GameObject();
+            GETerrain geTerrain = obj.AddComponent<GETerrain>();
+            geTerrain.SetWorldPosition(worldPosition);
+            geTerrain.SetRadius(radius);
+            geTerrain.ClearVertexGrid();
             geTerrain.CreateTerrain();
+            //DestroyImmediate(obj);
         }
     }
 }
