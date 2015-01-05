@@ -39,16 +39,15 @@ public class GETerrain : MonoBehaviour
 
     public void CreateTerrain()
     {
-        StartCoroutine(GetVertexGrid(worldPos));
+        StartCoroutine(GetHeights(worldPos, radius));
     }
 
-    private IEnumerator GetVertexRow(Vector2 start, Vector2 end, int index)
+    private IEnumerator GetHeights(Vector2 start, int radius)
     {
         Debug.Log("GetVertexRow");
-        Debug.Log("Start: " + start + "| " + "End: " + end + "| " + "Index: " + index);
-        string path = "path=" + start[0] + "," + start[1] + "|" + end[0] + "," + end[1];
-        string samples = "samples=" + radius * 2;
-        string url = urlStem + "?" + path + "&" + samples;// + "&key=AIzaSyAF4Bkkocrsf9tbab2UDsUfP8P5mSUpupc";
+        Debug.Log("Start: " + start + "| " + "Radius: " + radius);
+        string path = "center=" + start[0] + "," + start[1] + "&radius=" + radius;
+        string url = "104.236.5.114:5000/elevation" + "?" + path;
 
         Debug.Log(url);
         WWW www = new WWW(url);
@@ -68,67 +67,24 @@ public class GETerrain : MonoBehaviour
         }
 
 		JSONNode elevation_data = SimpleJSON.JSONNode.Parse (www.text);
-        Debug.Log("elevation_data " + elevation_data["results"].ToString());
-        Debug.Log(2 * radius - 1);
+        Debug.Log("elevation_data " + elevation_data.ToString());
 		// loop over results
-		for (int i = 0; i < elevation_data["results"].Count; i++)
+		for (int i = 0; i < elevation_data.Count; i++)
 		{
-            Debug.Log("i = " + i);
-			// record the heights
-			vertexGrid[index, i] = elevation_data["results"][i]["elevation"].AsFloat;
-            Debug.Log("height: " + vertexGrid[index, i]);
+            Debug.Log(elevation_data[i]);
+            for (int j = 0; j < elevation_data[i].Count; j++)
+            {
+                Debug.Log("i = " + i);
+                // record the heights
+                vertexGrid[i, j] = elevation_data.AsArray[i].AsArray[j].AsFloat;
+            }
         }
-	}
-    
-	// get a 2d-grid of vertices around the center
-	private IEnumerator GetVertexGrid(Vector2 center)
-    {
-        Debug.Log("GetVertexGrid(" + center + ")"); 
-		// latitudes are between -90 and 90
-		float top_latitude    = ((center[0] + (radius / km_per_degree_latitude) + 90) % 180) - 90;
-		float bottom_latitude = ((center[0] - (radius / km_per_degree_latitude) + 90) % 180) - 90;
-		
-		// longitudes are between 0 and 180
-		float right_longitude = center[1] + (radius / km_per_degree_latitude) % 180;
-		float left_longitude  = center[1] - (radius / km_per_degree_latitude) % 180;
-
-        Debug.Log("Right Longitude: " + right_longitude);
-		
-		// get distance between grid bounds
-		//float dy = (top_latitude - bottom_latitude) / radius / 2;
-		float dx = ((right_longitude - left_longitude) % 180) / radius / 2;
-		//print('dy = %f dx = %f' % (dy, dx));
-
-		// loop over rows	
-		for (int i = 0; i < 2 * radius; i++)
-		{
-            Debug.Log("loop " + i);
-			float row_latitude = top_latitude - (i * dx);
-            yield return StartCoroutine(GetVertexRow(new Vector2(row_latitude, left_longitude),
-                                                       new Vector2(row_latitude, right_longitude), i));
-			/*while (vertexGrid[i,(2 * radius) - 1] == Mathf.Infinity)
-			{
-                if (requestFailed)
-                {
-                    Debug.Log("request failed");
-                    return;
-                }
-
-				Debug.Log("vertex_grid[" + i + "] not set. Waiting");
-                wait(1);
-			} */
-		}
-        StartCoroutine(wait(3));
-        Debug.Log("Gog here");
+        
         TerrainData terrainData = new TerrainData();
         terrainData.SetHeights(0, 0, vertexGrid);
-        Terrain.CreateTerrainGameObject(terrainData);	
-	}
+        Terrain.CreateTerrainGameObject(terrainData);
 
-    private IEnumerator wait(int seconds)
-    {
-        yield return new WaitForSeconds(seconds);
-    }
+	}
 
     public void SetWorldPosition(Vector2 worldPos)
     {
